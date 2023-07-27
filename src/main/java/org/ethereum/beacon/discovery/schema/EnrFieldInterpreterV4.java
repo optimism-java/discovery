@@ -33,6 +33,7 @@ public class EnrFieldInterpreterV4 implements EnrFieldInterpreter {
     fieldDecoders.put(EnrField.IP_V6, Function.identity());
     fieldDecoders.put(EnrField.TCP_V6, fromBytes(bytes -> bytes.toUnsignedBigInteger().intValue()));
     fieldDecoders.put(EnrField.UDP_V6, fromBytes(bytes -> bytes.toUnsignedBigInteger().intValue()));
+    fieldDecoders.put(EnrField.OP_STACK, fromBytes(OpStackEnrData::decode));
   }
 
   private static Function<Object, Object> fromBytes(final Function<Bytes, Object> decoder) {

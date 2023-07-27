@@ -7,6 +7,7 @@ package org.ethereum.beacon.discovery.schema;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -252,15 +253,17 @@ class IdentitySchemaV4InterpreterTest {
   }
 
   @Test
-  public void enrDeserializationWithDuplicateFieldKeyShouldFail() {
+  public void enrDeserializationOpStackShouldSuccess() {
     NodeRecord nodeRecord = createNodeRecord(new EnrField(EnrField.TCP, 1234));
     final List<String> keys = new ArrayList<>();
     nodeRecord.forEachField((key, value) -> keys.add(key));
     keys.sort(Comparator.naturalOrder());
-    keys.add(keys.get(keys.size() - 1)); // Duplicate the last key
-    Bytes duplicateEntryBytes = RLP.encode(writer -> nodeRecord.writeRlp(writer, true, keys));
-    assertThatThrownBy(() -> NodeRecordFactory.DEFAULT.fromBytes(duplicateEntryBytes))
-        .isInstanceOf(DecodeException.class);
+    Bytes bytes = RLP.encode(writer -> nodeRecord.writeRlp(writer, true, keys));
+    NodeRecord nodeRecordDec = NodeRecordFactory.DEFAULT.fromBytes(bytes);
+    assertThat(((OpStackEnrData) nodeRecordDec.get(EnrField.OP_STACK)).getChainId().toBigInteger())
+        .isEqualTo(BigInteger.ONE);
+    assertThat(((OpStackEnrData) nodeRecordDec.get(EnrField.OP_STACK)).getVersion().toBigInteger())
+        .isEqualTo(BigInteger.ZERO);
   }
 
   @Test
@@ -273,6 +276,18 @@ class IdentitySchemaV4InterpreterTest {
     keys.sort(Comparator.<String>naturalOrder().reversed()); // Reversed order
     Bytes invalidEnrBytes = RLP.encode(writer -> nodeRecord.writeRlp(writer, true, keys));
     assertThatThrownBy(() -> NodeRecordFactory.DEFAULT.fromBytes(invalidEnrBytes))
+        .isInstanceOf(DecodeException.class);
+  }
+
+  @Test
+  public void enrDeserializationWithDuplicateFieldKeyShouldFail() {
+    NodeRecord nodeRecord = createNodeRecord(new EnrField(EnrField.TCP, 1234));
+    final List<String> keys = new ArrayList<>();
+    nodeRecord.forEachField((key, value) -> keys.add(key));
+    keys.sort(Comparator.naturalOrder());
+    keys.add(keys.get(keys.size() - 1)); // Duplicate the last key
+    Bytes duplicateEntryBytes = RLP.encode(writer -> nodeRecord.writeRlp(writer, true, keys));
+    assertThatThrownBy(() -> NodeRecordFactory.DEFAULT.fromBytes(duplicateEntryBytes))
         .isInstanceOf(DecodeException.class);
   }
 
@@ -290,6 +305,8 @@ class IdentitySchemaV4InterpreterTest {
     final ArrayList<EnrField> fieldList = new ArrayList<>(Arrays.asList(fields));
     fieldList.add(new EnrField(EnrField.ID, IdentitySchema.V4));
     fieldList.add(new EnrField(EnrField.PKEY_SECP256K1, PUB_KEY));
+    fieldList.add(
+        new EnrField(EnrField.OP_STACK, new OpStackEnrData(UInt64.ONE, UInt64.ZERO).encode()));
     return NodeRecordFactory.DEFAULT.createFromValues(UInt64.ZERO, fieldList);
   }
 }

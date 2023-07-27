@@ -31,6 +31,7 @@ public class EnrField {
   // Compressed secp256k1 public key, 33 bytes
   public static final String PKEY_SECP256K1 = "secp256k1";
 
+  public static final String OP_STACK = "opstack";
   private final String name;
   private final Object value;
 
